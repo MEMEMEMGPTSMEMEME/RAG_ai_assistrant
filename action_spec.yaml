@@ -1,15 +1,17 @@
 openapi: 3.1.0
 info:
-  title: RAG Assistant API
+  title: RAG Search API
   version: 1.0.0
-  description: 사용자의 요청에 따라 문서를 수집하고 검색하는 RAG 기반 API
+  description: 문서를 자동 수집하고 질문에 대해 관련 내용을 검색하여 응답하는 GPT 연동용 API입니다.
 servers:
   - url: https://rag-ai-assistrant.onrender.com
+
 paths:
   /start_data_ingestion:
     post:
       operationId: startDataIngestion
-      summary: 웹사이트 문서 수집 및 벡터화
+      summary: 문서 자동 수집 시작
+      description: URL을 기준으로 해당 도메인의 문서를 크롤링하고 벡터화하여 저장합니다.
       requestBody:
         required: true
         content:
@@ -19,12 +21,12 @@ paths:
               properties:
                 site_url:
                   type: string
-                  description: 문서를 수집할 대상 사이트 URL
+                  description: 크롤링을 시작할 사이트 URL
               required:
                 - site_url
       responses:
-        "200":
-          description: 수집 및 임베딩 완료 메시지
+        '200':
+          description: 성공적으로 문서 수집 완료
           content:
             application/json:
               schema:
@@ -37,8 +39,9 @@ paths:
 
   /ask:
     post:
-      operationId: askQuestion
-      summary: 문서 기반 질문 응답
+      operationId: ask
+      summary: 질문 기반 문서 검색
+      description: 사용자의 질문을 벡터화하여 관련 문서 내용을 검색하고 반환합니다.
       requestBody:
         required: true
         content:
@@ -48,19 +51,19 @@ paths:
               properties:
                 query:
                   type: string
-                  description: 사용자의 질문
+                  description: 사용자 질문
               required:
                 - query
       responses:
-        "200":
-          description: 관련 문서 반환
+        '200':
+          description: 관련 문서 내용 반환
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  documents:
+                  results:
                     type: array
                     items:
                       type: string
-                    description: 관련 문서 chunk 리스트
+                    description: 관련 문서 내용 리스트

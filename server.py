@@ -7,15 +7,9 @@ from crawler import collect_links
 from sentence_transformers import SentenceTransformer
 import faiss
 import pickle
-import numpy as np
 
 app = Flask(__name__)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-VECTOR_STORE_PATH = os.path.join(BASE_DIR, "vector_store", "doc_store.index")
-DOCS_PATH = os.path.join(BASE_DIR, "vector_store", "doc_chunks.pkl")
-
-# ▶ 임베딩 모델 로드
-model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
 
 @app.route("/health", methods=["GET"])
 def health_check():
@@ -33,7 +27,7 @@ def start_data_ingestion():
         parsed = urlparse(site_url)
         domain = parsed.netloc
 
-        print(f"[INFO] 📥 요청된 사이트: {site_url} (도메인: {domain})")
+        print(f"[INFO] 📥 요청된 사이트: {site_url}")
         print("[INFO] 🔎 링크 수집 중...")
         collect_links(start_url=site_url, allowed_domains=[domain])
 
@@ -54,7 +48,7 @@ def start_data_ingestion():
         return jsonify({"error": str(e)}), 500
 
 @app.route("/ask", methods=["POST"])
-def ask_question():
+def ask():
     try:
         data = request.get_json()
         query = data.get("query")
@@ -62,27 +56,37 @@ def ask_question():
         if not query:
             return jsonify({"error": "query is required"}), 400
 
-        if not os.path.exists(VECTOR_STORE_PATH) or not os.path.exists(DOCS_PATH):
-            return jsonify({"error": "벡터 저장소가 존재하지 않습니다."}), 500
+        print(f"[ASK] 🙋 사용자 질문: {query}")
 
-        print(f"[QUERY] 🤔 사용자 질문: {query}")
-        query_vector = model.encode([query])
-        query_vector = np.array(query_vector).astype("float32")
+        model = SentenceTransformer("all-MiniLM-L6-v2")
 
-        # FAISS index 로드
-        index = faiss.read_index(VECTOR_STORE_PATH)
+        index_path = os.path.join(BASE_DIR, "vector_store", "faiss_index.index")
+        metadata_path = os.path.join(BASE_DIR, "vector_store", "metadata.pkl")
 
-        # 문서 chunk 로드
-        with open(DOCS_PATH, "rb") as f:
-            doc_chunks = pickle.load(f)
+        if not os.path.exists(index_path) or not os.path.exists(metadata_path):
+            return jsonify({"error": "벡터 인덱스 또는 메타데이터가 존재하지 않습니다."}), 500
 
-        D, I = index.search(query_vector, k=5)
-        matched_docs = [doc_chunks[i] for i in I[0]]
+        index = faiss.read_index(index_path)
+        with open(metadata_path, "rb") as f:
+            metadata = pickle.load(f)
 
-        return jsonify({"documents": matched_docs}), 200
+        query_embedding = model.encode([query])
+        k = min(3, index.ntotal)
+        D, I = index.search(query_embedding, k)
+
+        results = []
+        for idx in I[0]:
+            if 0 <= idx < len(metadata):
+                file = metadata[idx]["filename"]
+                path = os.path.join(BASE_DIR, "parsed_docs", file)
+                if os.path.exists(path):
+                    with open(path, "r", encoding="utf-8") as f:
+                        results.append(f.read()[:1000])
+
+        return jsonify({"results": results}), 200
 
     except Exception as e:
-        print(f"[ERROR] ❌ 질문 처리 중 오류: {e}")
+        print(f"[ERROR] ❌ ask 처리 중 오류: {e}")
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 

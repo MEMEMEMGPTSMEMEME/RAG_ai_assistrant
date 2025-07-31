@@ -2,7 +2,7 @@ name: Auto Embed Weekly
 
 on:
   schedule:
-    - cron: '0 4 * * 1'  # 매주 월요일 오전 4시 (UTC) → 한국 기준 월요일 오후 1시
+    - cron: '0 4 * * 1'  # 매주 월요일 오전 4시 (UTC)
   workflow_dispatch:
 
 jobs:
@@ -31,8 +31,6 @@ jobs:
       run: |
         git config user.name "rag-bot"
         git config user.email "bot@rag.local"
-        git add vector_store/ parsed_docs/ downloaded_html/
+        git add .
         git commit -m "🔁 auto: weekly vector update"
-        git push
-      env:
-        GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        git push https://<YOUR_GITHUB_PAT>@github.com/<YOUR_USERNAME>/<YOUR_REPO>.git

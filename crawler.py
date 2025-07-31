@@ -1,61 +1,58 @@
 # crawler.py
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
-from urllib.parse import urlparse
-import time
+import requests
+from bs4 import BeautifulSoup
+from urllib.parse import urljoin, urlparse
+import os
+import re
 
 SKIP_EXT = [".pdf", ".zip", ".js", ".css", ".ico", ".png", ".jpg", ".jpeg", ".svg"]
-MAX_FAIL = 3
+visited = set()
 
-def collect_links(start_url, allowed_domains, output_file="all_links.txt", max_links=1000):
-    fail_counts = {}
-    visited = set()
+def collect_links(start_url, allowed_domains=None, output_file="all_links.txt", max_links=1000):
+    if allowed_domains is None:
+        parsed = urlparse(start_url)
+        allowed_domains = [parsed.netloc]
+
     to_visit = [start_url]
-
-    options = Options()
-    options.headless = True
-    driver = webdriver.Chrome(options=options)
+    os.makedirs("html", exist_ok=True)
+    collected = 0
 
     with open(output_file, "w", encoding="utf-8") as f:
-        while to_visit and len(visited) < max_links:
+        while to_visit and collected < max_links:
             url = to_visit.pop()
             if url in visited:
                 continue
             visited.add(url)
 
-            parsed = urlparse(url)
-            domain = parsed.netloc
-            if fail_counts.get(domain, 0) >= MAX_FAIL:
-                print(f"⛔ 도메인 차단됨: {domain}")
+            try:
+                print(f"🔗 요청 중: {url}")
+                response = requests.get(url, timeout=5)
+                if response.status_code != 200:
+                    continue
+            except Exception as e:
+                print(f"[ERROR] 요청 실패: {url} ({e})")
                 continue
 
-            try:
-                print(f"🔗 방문 중: {url}")
-                driver.get(url)
-                time.sleep(1.0)
+            parsed_url = urlparse(url)
+            if not any(domain in parsed_url.netloc for domain in allowed_domains):
+                continue
 
-                anchors = driver.find_elements("tag name", "a")
-                for a in anchors:
-                    href = a.get_attribute("href")
-                    if not href:
-                        continue
+            if any(parsed_url.path.endswith(ext) for ext in SKIP_EXT):
+                continue
 
-                    parsed_href = urlparse(href)
-                    netloc = parsed_href.netloc
-                    path = parsed_href.path
-                    full_url = parsed_href.scheme + "://" + netloc + path
+            # HTML 저장
+            filename = re.sub(r"[^a-zA-Z0-9]", "_", url) + ".html"
+            filepath = os.path.join("html", filename)
+            with open(filepath, "w", encoding="utf-8") as html_file:
+                html_file.write(response.text)
+            collected += 1
 
-                    if not any(domain in netloc for domain in allowed_domains):
-                        continue
-                    if any(path.endswith(ext) for ext in SKIP_EXT):
-                        continue
-                    if full_url not in visited and full_url not in to_visit:
-                        to_visit.append(full_url)
-                        f.write(full_url + "\n")
+            soup = BeautifulSoup(response.text, "html.parser")
+            for link_tag in soup.find_all("a", href=True):
+                href = link_tag["href"]
+                full_url = urljoin(url, href)
+                if full_url.startswith("http") and full_url not in visited and full_url not in to_visit:
+                    to_visit.append(full_url)
+                    f.write(full_url + "\n")
 
-            except Exception as e:
-                print(f"[!] 실패: {url} ({e})")
-                fail_counts[domain] = fail_counts.get(domain, 0) + 1
-
-    driver.quit()
-    print(f"\n✅ 수집 완료: {len(visited)}개 링크 → {output_file}")
+    print(f"\n✅ 수집 완료: {collected}개 링크 저장됨 → {output_file}")

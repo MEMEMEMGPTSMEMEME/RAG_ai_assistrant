@@ -1,0 +1,81 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+*.egg-info/
+dist/
+build/
+
+# Installer logs
+pip-log.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+
+# Pytest
+.pytest_cache/
+
+# Environment variable files
+.env
+.env.*
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints
+
+# VSCode
+.vscode/
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Logs and runtime files
+logs/
+*.log
+
+# FAISS vector DB
+vector_store/
+*.index
+*.pkl
+
+# HTML/text artifacts
+downloaded_html/
+parsed_docs/
+all_links.txt
+
+# Executables
+wget.exe
+chromedriver.exe
+
+# Output scripts
+run_pipeline.ps1
+run_pipeline.bat
+run_ingestion.ps1
+run_ingestion.bat
+
+# GPT actions or integrations
+gpts_action.json
+action_spec.yaml

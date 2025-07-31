@@ -11,6 +11,7 @@ import pickle
 app = Flask(__name__)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
+
 @app.route("/", methods=["GET"])
 def index():
     return jsonify({
@@ -20,11 +21,13 @@ def index():
             "/start_data_ingestion",
             "/ask"
         ]
-    }), 200
+    })
+
 
 @app.route("/health", methods=["GET"])
 def health_check():
-    return jsonify({"status": "ok"}), 200
+    return jsonify({"status": "ok"})
+
 
 @app.route("/start_data_ingestion", methods=["POST"])
 def start_data_ingestion():
@@ -36,26 +39,20 @@ def start_data_ingestion():
 
         parsed = urlparse(site_url)
         domain = parsed.netloc
+        print(f"[INFO] 📥 수집 시작: {site_url}")
 
-        print(f"[INFO] 📥 요청된 사이트: {site_url}")
-        print("[INFO] 🔎 링크 수집 중...")
         collect_links(start_url=site_url, allowed_domains=[domain])
 
-        print("[INFO] ⬇ HTML 다운로드 실행...")
         subprocess.run(["python", os.path.join(BASE_DIR, "html_downloader.py")], check=True)
-
-        print("[INFO] 📝 텍스트 추출 실행...")
         subprocess.run(["python", os.path.join(BASE_DIR, "parse_local_html.py")], check=True)
-
-        print("[INFO] 🔍 문서 임베딩 실행...")
         subprocess.run(["python", os.path.join(BASE_DIR, "embed.py")], check=True)
 
-        return jsonify({"status": "completed", "message": f"{domain} 문서 수집 및 임베딩 완료"}), 200
+        return jsonify({"status": "completed", "message": f"{domain} 문서 수집 및 임베딩 완료"})
 
     except Exception as e:
-        print(f"[ERROR] ❌ 오류 발생: {e}")
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
+
 
 @app.route("/ask", methods=["POST"])
 def ask():
@@ -65,7 +62,7 @@ def ask():
         if not query:
             return jsonify({"error": "query is required"}), 400
 
-        print(f"[ASK] 🙋 사용자 질문: {query}")
+        print(f"[ASK] 🙋 질문: {query}")
 
         model = SentenceTransformer("all-MiniLM-L6-v2")
 
@@ -80,24 +77,22 @@ def ask():
             metadata = pickle.load(f)
 
         query_embedding = model.encode([query])
-        k = min(3, index.ntotal)
-        D, I = index.search(query_embedding, k)
+        D, I = index.search(query_embedding, min(3, index.ntotal))
 
         results = []
         for idx in I[0]:
             if 0 <= idx < len(metadata):
-                file = metadata[idx]["filename"]
-                path = os.path.join(BASE_DIR, "parsed_docs", file)
+                path = os.path.join(BASE_DIR, "parsed_docs", metadata[idx]["filename"])
                 if os.path.exists(path):
                     with open(path, "r", encoding="utf-8") as f:
                         results.append(f.read()[:1000])
 
-        return jsonify({"results": results}), 200
+        return jsonify({"results": results})
 
     except Exception as e:
-        print(f"[ERROR] ❌ ask 처리 중 오류: {e}")
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
+
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)

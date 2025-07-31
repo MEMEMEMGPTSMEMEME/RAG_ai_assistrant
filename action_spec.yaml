@@ -1,0 +1,42 @@
+openapi: 3.1.0
+info:
+  title: RAG 문서 수집 API
+  version: 1.0.0
+  description: 특정 사이트 문서를 크롤링하고 벡터화하여 RAG 시스템에 반영합니다.
+servers:
+  - url: https://YOUR_NGROK_URL_HERE
+
+paths:
+  /start_data_ingestion:
+    post:
+      operationId: startDataIngestion
+      summary: 문서 자동 수집 요청
+      description: GPTs에서 호출 시 지정된 URL 문서를 자동 수집하고 벡터화합니다.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                site_url:
+                  type: string
+                  description: 수집 시작할 웹사이트 주소
+              required:
+                - site_url
+      responses:
+        '200':
+          description: 수집 완료
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  message:
+                    type: string
+        '400':
+          description: 요청 오류
+        '500':
+          description: 서버 오류

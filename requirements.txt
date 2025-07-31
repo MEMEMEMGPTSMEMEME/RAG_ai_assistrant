@@ -1,0 +1,13 @@
+selenium
+beautifulsoup4
+requests
+flask
+tqdm
+sentence-transformers
+faiss-cpu
+langdetect
+python-docx
+pdfminer.six
+chardet
+schedule
+python-dotenv

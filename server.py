@@ -11,17 +11,6 @@ import pickle
 app = Flask(__name__)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-@app.route("/", methods=["GET"])
-def index():
-    return jsonify({
-        "message": "✅ RAG Assistant 서버 실행 중입니다.",
-        "available_endpoints": [
-            "/health",
-            "/start_data_ingestion",
-            "/ask"
-        ]
-    }), 200
-
 @app.route("/health", methods=["GET"])
 def health_check():
     return jsonify({"status": "ok"}), 200
@@ -38,11 +27,11 @@ def start_data_ingestion():
         parsed = urlparse(site_url)
         domain = parsed.netloc
 
+        # 🔓 도메인 제한 제거 → 모든 도메인 수집 가능
         print(f"[INFO] 수집 요청된 도메인: {domain}")
         print(f"[INFO] 📥 요청된 사이트: {site_url}")
         print("[INFO] 🔎 링크 수집 중...")
 
-        # 도메인 제한 없이 수집
         collect_links(start_url=site_url)
 
         print("[INFO] ⬇ HTML 다운로드 실행...")

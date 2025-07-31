@@ -8,8 +8,6 @@ from crawler import collect_links
 app = Flask(__name__)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-ALLOWED_DOMAINS = ["docs.blender.org", "docs.python.org"]
-
 @app.route("/health", methods=["GET"])
 def health_check():
     return jsonify({"status": "ok"}), 200
@@ -26,12 +24,12 @@ def start_data_ingestion():
         parsed = urlparse(site_url)
         domain = parsed.netloc
 
-        if domain not in ALLOWED_DOMAINS:
-            return jsonify({"error": f"Domain '{domain}' not allowed."}), 403
+        # 도메인 제한 없음 — 모든 외부 요청 허용
+        print(f"[INFO] 📥 요청된 사이트: {site_url} (도메인: {domain})")
+        print("[WARN] ⚠ 모든 도메인 허용 중 — 향후 화이트리스트 또는 인증 필요!")
 
-        print(f"[INFO] 📥 요청된 사이트: {site_url}")
         print("[INFO] 🔎 링크 수집 중...")
-        collect_links(start_url=site_url, allowed_domains=ALLOWED_DOMAINS)
+        collect_links(start_url=site_url, allowed_domains=[domain])
 
         print("[INFO] ⬇ HTML 다운로드 실행...")
         subprocess.run(["python", os.path.join(BASE_DIR, "html_downloader.py")], check=True)

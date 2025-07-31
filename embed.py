@@ -1,51 +1,49 @@
 # embed.py
 import os
-import pickle
-from tqdm import tqdm
-import numpy as np
 import faiss
+import pickle
 from sentence_transformers import SentenceTransformer
+from tqdm import tqdm
 
 TXT_DIR = "parsed_docs"
-VECTOR_DIR = "vector_store"
-INDEX_FILE = os.path.join(VECTOR_DIR, "index.faiss")
-ID_MAP_FILE = os.path.join(VECTOR_DIR, "doc_ids.pkl")
+VECTOR_STORE = "vector_store"
+INDEX_PATH = os.path.join(VECTOR_STORE, "faiss_index.index")
+METADATA_PATH = os.path.join(VECTOR_STORE, "metadata.pkl")
 
-os.makedirs(VECTOR_DIR, exist_ok=True)
+def load_texts():
+    texts = []
+    metadata = []
+    for filename in os.listdir(TXT_DIR):
+        if filename.endswith(".txt"):
+            with open(os.path.join(TXT_DIR, filename), "r", encoding="utf-8") as f:
+                content = f.read()
+                texts.append(content)
+                metadata.append({"filename": filename})
+    return texts, metadata
 
-# ✅ 모델 로딩 (한국어/영어 모두 무난한 범용 모델)
-model = SentenceTransformer("all-MiniLM-L6-v2")
+def embed_and_store(texts, metadata):
+    print("✅ 임베딩 모델 로딩 중...")
+    model = SentenceTransformer("all-MiniLM-L6-v2")
+    
+    print("📊 임베딩 생성 중...")
+    embeddings = model.encode(texts, show_progress_bar=True)
 
-# 📄 텍스트 파일 목록
-files = [f for f in os.listdir(TXT_DIR) if f.endswith(".txt")]
-
-embeddings = []
-doc_ids = []
-
-print(f"📚 {len(files)}개 문서 벡터화 중...")
-
-for filename in tqdm(files, desc="🔍 임베딩 중"):
-    with open(os.path.join(TXT_DIR, filename), "r", encoding="utf-8") as f:
-        text = f.read()
-    if len(text.strip()) < 30:
-        continue  # 너무 짧은 문서는 제외
-
-    embedding = model.encode(text, show_progress_bar=False)
-    embeddings.append(embedding)
-    doc_ids.append(filename)
-
-# ▶ FAISS 저장
-if embeddings:
-    dim = len(embeddings[0])
+    dim = embeddings.shape[1]
     index = faiss.IndexFlatL2(dim)
-    index.add(np.array(embeddings).astype("float32"))
-    faiss.write_index(index, INDEX_FILE)
+    index.add(embeddings)
 
-    # ▶ 문서 ID 매핑 저장
-    with open(ID_MAP_FILE, "wb") as f:
-        pickle.dump(doc_ids, f)
+    print("💾 벡터 저장 중...")
+    os.makedirs(VECTOR_STORE, exist_ok=True)
+    faiss.write_index(index, INDEX_PATH)
 
-    print(f"\n✅ 벡터 DB 저장 완료 → {INDEX_FILE}")
-    print(f"🗂 문서 매핑 저장 완료 → {ID_MAP_FILE}")
-else:
-    print("⚠️ 유효한 문서가 없어 벡터 저장을 생략했습니다.")
+    with open(METADATA_PATH, "wb") as f:
+        pickle.dump(metadata, f)
+
+    print(f"✅ 완료! 저장 위치: {INDEX_PATH}")
+
+if __name__ == "__main__":
+    texts, metadata = load_texts()
+    if not texts:
+        print("⚠️ 추출된 텍스트가 없습니다.")
+    else:
+        embed_and_store(texts, metadata)

@@ -39,7 +39,7 @@ def start_data_ingestion():
 
         print(f"[INFO] 📥 요청된 사이트: {site_url}")
         print("[INFO] 🔎 링크 수집 중...")
-        collect_links(start_url=site_url)  # allowed_domains 제거됨
+        collect_links(start_url=site_url, allowed_domains=[domain])
 
         print("[INFO] ⬇ HTML 다운로드 실행...")
         subprocess.run(["python", os.path.join(BASE_DIR, "html_downloader.py")], check=True)

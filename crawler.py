@@ -36,11 +36,9 @@ def collect_links(start_url, allowed_domains=None, output_file="all_links.txt", 
             parsed_url = urlparse(url)
             if not any(domain in parsed_url.netloc for domain in allowed_domains):
                 continue
-
             if any(parsed_url.path.endswith(ext) for ext in SKIP_EXT):
                 continue
 
-            # HTML 저장
             filename = re.sub(r"[^a-zA-Z0-9]", "_", url) + ".html"
             filepath = os.path.join("html", filename)
             with open(filepath, "w", encoding="utf-8") as html_file:
